@@ -357,11 +357,8 @@ async function guardar(){
   if(!lluvia&&!riego){msg.innerHTML='<div class="er-msg">Ingresá lluvia o riego</div>';return;}
   msg.innerHTML='<div style="color:#9d9d99;text-align:center;padding:12px">Guardando...</div>';
   try{
-    const r=await fetch(APPS_SCRIPT_URL,{
-      method:"POST",
-      body:JSON.stringify({pivot,fecha,lluvia,riego}),
-      headers:{"Content-Type":"application/json"}
-    });
+    const qs=new URLSearchParams({pivot,fecha,lluvia,riego}).toString();
+    const r=await fetch(APPS_SCRIPT_URL+"?"+qs);
     const d=await r.json();
     if(d.ok){
       msg.innerHTML=`<div class="ok-msg">✅ Guardado en Sheets<br>${pivot} — ${fecha}<br>Lluvia: ${lluvia}mm · Riego: ${riego}mm</div>`;
