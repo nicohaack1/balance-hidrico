@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Balance Hídrico — Grupo DH</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+  --bg:#f5f5f3;--sf:#fff;--sf2:#f9f9f8;--bd:rgba(0,0,0,0.09);
+  --t:#1a1a18;--t2:#6b6b67;--t3:#9d9d99;--acc:#2563eb;
+  --gBg:#e8f5e9;--g:#2e7d32;--yBg:#fff8e1;--y:#b45309;
+  --rBg:#fdecea;--r:#c62828;--grBg:#f1f1ef;--gr:#6b6b67;
+  --pt:env(safe-area-inset-top,0px);--pb:env(safe-area-inset-bottom,0px);
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#161614;--sf:#222220;--sf2:#2a2a28;--bd:rgba(255,255,255,0.08);
+  --t:#f0f0ee;--t2:#9d9d99;--t3:#6b6b67;
+  --gBg:#1a3a1b;--g:#66bb6a;--yBg:#352800;--y:#fbbf24;
+  --rBg:#3a1010;--r:#f87171;--grBg:#2a2a28;--gr:#9d9d99;
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--t)}
+.bar{position:fixed;top:0;left:0;right:0;z-index:1000;background:var(--bg);border-bottom:0.5px solid var(--bd);padding:calc(var(--pt)+10px) 14px 10px;display:flex;justify-content:space-between;align-items:center}
+.bar h1{font-size:15px;font-weight:600}
+.bar-r{display:flex;align-items:center;gap:8px}
+.upd{font-size:11px;color:var(--t3)}
+.btn{background:var(--sf);border:0.5px solid var(--bd);border-radius:8px;padding:6px 11px;cursor:pointer;font-size:12px;color:var(--t2)}
+.tabs{position:fixed;bottom:0;left:0;right:0;z-index:1000;background:var(--bg);border-top:0.5px solid var(--bd);display:flex;padding-bottom:var(--pb)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 8px;cursor:pointer;font-size:10px;color:var(--t3);gap:3px;border:none;background:none}
+.tab.active{color:var(--acc)}
+.tab svg{width:22px;height:22px}
+.page{position:fixed;top:calc(var(--pt)+48px);bottom:calc(var(--pb)+52px);left:0;right:0;overflow-y:auto;display:none}
+.page.active{display:block}
+#map{width:100%;height:100%}
+.cards-page{padding:10px 12px}
+.clbl{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px}
+@media(max-width:380px){.grid{grid-template-columns:1fr 1fr}}
+.card{background:var(--sf);border:0.5px solid var(--bd);border-radius:12px;padding:11px 12px;cursor:pointer}
+.card.off{opacity:.4}
+.card:active{transform:scale(.98)}
+.ct{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px}
+.pid{font-size:13px;font-weight:600}
+.bdg{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px}
+.bok{background:var(--gBg);color:var(--g)}.bw{background:var(--yBg);color:var(--y)}
+.bdr{background:var(--rBg);color:var(--r)}.bn{background:var(--grBg);color:var(--gr)}
+.cult{font-size:11px;color:var(--t2);margin-bottom:8px}
+.mx{display:grid;grid-template-columns:1fr 1fr;gap:5px 8px}
+.ml{font-size:9px;color:var(--t3);margin-bottom:1px}.mv{font-size:12px;font-weight:500}
+.rc{color:var(--r)}
+.divl{border:none;border-top:0.5px solid var(--bd);margin:7px 0}
+.nx{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--t2)}
+.dc{font-size:10px;font-weight:600;padding:2px 6px;border-radius:20px}
+.carga-page{padding:12px}
+.form-card{background:var(--sf);border:0.5px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:12px}
+.form-title{font-size:14px;font-weight:600;margin-bottom:14px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;color:var(--t2);margin-bottom:5px;font-weight:500}
+.field select,.field input{width:100%;padding:10px 12px;border:0.5px solid var(--bd);border-radius:9px;background:var(--sf2);color:var(--t);font-size:14px;-webkit-appearance:none}
+.sbtn{width:100%;padding:13px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+.sbtn:active{opacity:.85}
+.ok-msg{background:var(--gBg);color:var(--g);border-radius:10px;padding:12px;text-align:center;font-size:13px;font-weight:500;margin-top:10px}
+.err-msg{background:var(--rBg);color:var(--r);border-radius:10px;padding:12px;text-align:center;font-size:13px;margin-top:10px}
+.tots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 12px}
+.tot{background:var(--sf);border:0.5px solid var(--bd);border-radius:12px;padding:12px;text-align:center}
+.tl{font-size:9px;color:var(--t3);margin-bottom:3px}.tv{font-size:20px;font-weight:600}.tu{font-size:9px;color:var(--t3);margin-top:2px}
+/* Popup mapa */
+.lp{min-width:165px}
+.lp-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.lp-cult{font-size:11px;color:#666;margin-bottom:8px}
+.lp-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;gap:12px}
+.lp-lbl{color:#999}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <h1>🌱 Balance Hídrico — Grupo DH</h1>
+  <div class="bar-r">
+    <span class="upd" id="upd">—</span>
+    <button class="btn" onclick="refresh()">↻</button>
+  </div>
+</div>
+
+<div class="page active" id="page-map"><div id="map"></div></div>
+<div class="page" id="page-cards"><div id="cards-content" style="padding:8px 12px;color:#999;text-align:center">Cargando...</div></div>
+<div class="page" id="page-carga">
+  <div class="carga-page">
+    <div class="form-card">
+      <div class="form-title">Cargar Lluvia / Riego</div>
+      <div class="field"><label>Pivot</label>
+        <select id="f-pivot">
+          <option value="">Seleccioná...</option>
+          <option>LA_R1</option><option>LA_R2</option><option>LE_RIEGO</option><option>LM_RIEGO</option>
+          <option>EP_R1_A</option><option>EP_R1_B</option><option>EP_R1_C</option>
+          <option>SJ_R2_A</option><option>SJ_R2_B</option><option>SJ_R2_C</option>
+        </select>
+      </div>
+      <div class="field"><label>Fecha</label><input type="date" id="f-fecha"></div>
+      <div class="field"><label>Lluvia (mm)</label><input type="number" id="f-lluvia" placeholder="0" min="0" step="0.1"></div>
+      <div class="field"><label>Riego aplicado (mm)</label><input type="number" id="f-riego" placeholder="0" min="0" step="0.1"></div>
+      <button class="sbtn" onclick="guardar()">Guardar</button>
+      <div id="carga-msg"></div>
+    </div>
+    <p style="font-size:11px;color:var(--t3);text-align:center;padding:0 16px">Los datos se guardan en Google Sheets via Apps Script.</p>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" id="tab-map" onclick="goPage('map')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7z"/><path d="M9 4v13M15 7v13"/></svg>Mapa
+  </button>
+  <button class="tab" id="tab-cards" onclick="goPage('cards')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Pivots
+  </button>
+  <button class="tab" id="tab-carga" onclick="goPage('carga')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>Cargar
+  </button>
+</div>
+
+<script>
+const CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6R4wJj-1DpKka4Zd-0CPEi_JAHfDI7xZWcBcSgC4nJAW_7ex1S-r91elxNShPaQZswrANg7cw-ZKD/pub?gid=628155561&single=true&output=csv";
+const APPS_SCRIPT_URL=""; // Completar después
+
+// Pivotes simples (círculo único)
+const PIVOT_SINGLE = {
+  "LA_R1":    {lat:-37.410993, lon:-61.938805, r:420},
+  "LA_R2":    {lat:-37.427284, lon:-61.944971, r:280},
+  "LE_RIEGO": {lat:-37.651794, lon:-61.870594, r:430},
+  "LM_RIEGO": {lat:-37.644442, lon:-61.864526, r:450},
+};
+
+// Pivotes multi-sector
+// EP R1: círculo completo, 3 sectores de 120°
+// Ángulos calculados de los KMZ: A≈-10°, B≈-128°, C≈101° (desde Norte, sentido horario)
+// Sectores: cada uno abarca 120°
+const PIVOT_EP = {
+  center: {lat:-37.454124, lon:-61.582570},
+  r: 700,
+  sectors: [
+    {id:"EP_R1_A", startAngle:-70,  endAngle:50},
+    {id:"EP_R1_B", startAngle:170,  endAngle:290},
+    {id:"EP_R1_C", startAngle:50,   endAngle:170},
+  ]
+};
+
+// SJ R2: círculo con sector faltante (no se riega)
+// A≈12°, B≈104°, C≈-162° → el sector vacío es aprox 280°-360° (NO y NE)
+const PIVOT_SJ = {
+  center: {lat:-37.446073, lon:-61.608420},
+  r: 860,
+  sectors: [
+    {id:"SJ_R2_A", startAngle:-47,  endAngle:73},
+    {id:"SJ_R2_B", startAngle:73,   endAngle:193},
+    {id:"SJ_R2_C", startAngle:193,  endAngle:313},
+    // sector vacío: 313 a 313 (no se riega)
+  ],
+  emptyAngle: {start:313, end:413} // ~100° vacíos
+};
+
+const ALL_PIVOTS = Object.keys(PIVOT_SINGLE).concat(
+  PIVOT_EP.sectors.map(s=>s.id),
+  PIVOT_SJ.sectors.map(s=>s.id)
+);
+
+let data={}, map=null, layers=[];
+
+// CSV Parser
+function parseCSV(txt){
+  const rows=[];let cur=[],f="",q=false;
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(q){if(c==='"'&&txt[i+1]==='"'){f+='"';i++;}else if(c==='"')q=false;else f+=c;}
+    else{if(c==='"')q=true;else if(c===','){cur.push(f);f="";}else if(c==='\n'){cur.push(f);rows.push(cur);cur=[];f="";}else if(c!=='\r')f+=c;}
+  }
+  if(f||cur.length){cur.push(f);rows.push(cur);}
+  return rows;
+}
+function num(s){return parseFloat((s||"0").replace(",",".").replace("%",""))||0;}
+
+function alertColor(a){
+  if(!a||a==="—"||a==="")return"#9d9d99";
+  if(a.includes("REGAR"))return"#c62828";
+  if(a.includes("Pronto"))return"#d97706";
+  return"#2e7d32";
+}
+function alertAlpha(a){
+  if(a&&a.includes("REGAR"))return 0.5;
+  if(a&&a.includes("Pronto"))return 0.4;
+  return 0.25;
+}
+
+// Generar polígono sector (arco de círculo)
+function sectorPolygon(centerLat, centerLon, radiusM, startDeg, endDeg, steps=32){
+  // Convertir radio de metros a grados
+  const latR = radiusM / 111320;
+  const lonR = radiusM / (111320 * Math.cos(centerLat * Math.PI/180));
+  
+  const pts = [[centerLat, centerLon]];
+  const start = startDeg * Math.PI/180;
+  const end = endDeg * Math.PI/180;
+  const step = (end - start) / steps;
+  
+  for(let i=0; i<=steps; i++){
+    const angle = start + i*step;
+    // Norte=0, Este=90 (eje Y hacia arriba = Norte)
+    pts.push([
+      centerLat  + latR * Math.cos(angle),
+      centerLon  + lonR * Math.sin(angle)
+    ]);
+  }
+  pts.push([centerLat, centerLon]);
+  return pts;
+}
+
+function popupHtml(p){
+  if(!p) return '<div class="lp"><div class="lp-title">Sin datos</div></div>';
+  const sin=!p.cult||p.cult.includes("Sin")||p.cult==="—";
+  return `<div class="lp">
+    <div class="lp-title">${p.pid}</div>
+    <div class="lp-cult">${sin?'Sin cultivo':p.cult+(p.ddc?' · DDC '+p.ddc:'')}</div>
+    ${sin?'':`
+    <div class="lp-row"><span class="lp-lbl">AU disp.</span><span>${p.au||'—'} mm</span></div>
+    <div class="lp-row"><span class="lp-lbl">% AU</span><span>${p.pct||'—'}</span></div>
+    <div class="lp-row"><span class="lp-lbl">Estadio</span><span>${p.est||'—'}</span></div>
+    <div class="lp-row"><span class="lp-lbl">Prox. riego</span><span>${p.prox||'—'}</span></div>
+    <div class="lp-row"><span class="lp-lbl">Días</span><span>${p.dias||'—'}</span></div>`}
+  </div>`;
+}
+
+function initMap(){
+  if(map) return;
+  map = L.map('map',{zoomControl:false}).setView([-37.52,-61.75],11);
+  L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
+    subdomains:['mt0','mt1','mt2','mt3'],
+    attribution:'© Google',maxZoom:20
+  }).addTo(map);
+  L.control.zoom({position:'bottomright'}).addTo(map);
+}
+
+function updateMapLayers(){
+  layers.forEach(l=>map.removeLayer(l));
+  layers=[];
+
+  // Pivotes simples
+  Object.entries(PIVOT_SINGLE).forEach(([pid,cfg])=>{
+    const p=data[pid]||{pid,cult:'',alerta:''};
+    const color=alertColor(p.alerta);
+    const alpha=alertAlpha(p.alerta);
+    const circle=L.circle([cfg.lat,cfg.lon],{
+      radius:cfg.r, color, fillColor:color, fillOpacity:alpha, weight:2.5
+    }).addTo(map).bindPopup(popupHtml(p));
+    layers.push(circle);
+
+    const icon=L.divIcon({
+      html:`<div style="font-size:10px;font-weight:700;color:#fff;background:${color};padding:2px 6px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)">${pid}</div>`,
+      className:'',iconAnchor:[24,0]
+    });
+    const mk=L.marker([cfg.lat,cfg.lon],{icon}).addTo(map);
+    layers.push(mk);
+  });
+
+  // EP R1 — sectores
+  PIVOT_EP.sectors.forEach(s=>{
+    const p=data[s.id]||{pid:s.id,cult:'',alerta:''};
+    const color=alertColor(p.alerta);
+    const alpha=alertAlpha(p.alerta);
+    const pts=sectorPolygon(PIVOT_EP.center.lat,PIVOT_EP.center.lon,PIVOT_EP.r,s.startAngle,s.endAngle);
+    const poly=L.polygon(pts,{color:'#fff',fillColor:color,fillOpacity:alpha,weight:2})
+      .addTo(map).bindPopup(popupHtml(p));
+    layers.push(poly);
+    // Label en el centroide del sector
+    const midAngle=(s.startAngle+s.endAngle)/2*Math.PI/180;
+    const latR=PIVOT_EP.r*0.6/111320;
+    const lonR=PIVOT_EP.r*0.6/(111320*Math.cos(PIVOT_EP.center.lat*Math.PI/180));
+    const lLat=PIVOT_EP.center.lat+latR*Math.cos(midAngle);
+    const lLon=PIVOT_EP.center.lon+lonR*Math.sin(midAngle);
+    const icon=L.divIcon({
+      html:`<div style="font-size:9px;font-weight:700;color:#fff;background:${color};padding:1px 5px;border-radius:3px;white-space:nowrap">${s.id}</div>`,
+      className:'',iconAnchor:[20,8]
+    });
+    layers.push(L.marker([lLat,lLon],{icon}).addTo(map));
+  });
+
+  // SJ R2 — sectores (con sector vacío)
+  PIVOT_SJ.sectors.forEach(s=>{
+    const p=data[s.id]||{pid:s.id,cult:'',alerta:''};
+    const color=alertColor(p.alerta);
+    const alpha=alertAlpha(p.alerta);
+    const pts=sectorPolygon(PIVOT_SJ.center.lat,PIVOT_SJ.center.lon,PIVOT_SJ.r,s.startAngle,s.endAngle);
+    const poly=L.polygon(pts,{color:'#fff',fillColor:color,fillOpacity:alpha,weight:2})
+      .addTo(map).bindPopup(popupHtml(p));
+    layers.push(poly);
+    const midAngle=(s.startAngle+s.endAngle)/2*Math.PI/180;
+    const latR=PIVOT_SJ.r*0.6/111320;
+    const lonR=PIVOT_SJ.r*0.6/(111320*Math.cos(PIVOT_SJ.center.lat*Math.PI/180));
+    const lLat=PIVOT_SJ.center.lat+latR*Math.cos(midAngle);
+    const lLon=PIVOT_SJ.center.lon+lonR*Math.sin(midAngle);
+    const icon=L.divIcon({
+      html:`<div style="font-size:9px;font-weight:700;color:#fff;background:${color};padding:1px 5px;border-radius:3px;white-space:nowrap">${s.id}</div>`,
+      className:'',iconAnchor:[20,8]
+    });
+    layers.push(L.marker([lLat,lLon],{icon}).addTo(map));
+  });
+  // Sector vacío SJ
+  const empPts=sectorPolygon(PIVOT_SJ.center.lat,PIVOT_SJ.center.lon,PIVOT_SJ.r,
+    PIVOT_SJ.emptyAngle.start,PIVOT_SJ.emptyAngle.end);
+  layers.push(L.polygon(empPts,{color:'#fff',fillColor:'#9d9d99',fillOpacity:0.15,weight:2,dashArray:'4'}).addTo(map));
+}
+
+// Tarjetas
+const CAMPOS={
+  "La Alcancia":["LA_R1","LA_R2"],
+  "La Esquina Biodes":["LE_RIEGO"],
+  "La Medialuna":["LM_RIEGO"],
+  "San Justo EP R1":["EP_R1_A","EP_R1_B","EP_R1_C"],
+  "San Justo R2":["SJ_R2_A","SJ_R2_B","SJ_R2_C"]
+};
+function bdg(a){
+  if(!a||a==="—"||a==="")return'<span class="bdg bn">Sin siembra</span>';
+  if(a.includes("REGAR"))return'<span class="bdg bdr">Regar ya</span>';
+  if(a.includes("Pronto"))return'<span class="bdg bw">Pronto</span>';
+  return'<span class="bdg bok">OK</span>';
+}
+function dc(d){
+  if(!d||d==="—"||d==="")return'<span class="dc bn">—</span>';
+  const n=parseInt(d);
+  if(isNaN(n)||n<=0)return'<span class="dc bdr">Vencido</span>';
+  if(n<=7)return'<span class="dc bw">'+n+'d</span>';
+  return'<span class="dc bok">'+n+'d</span>';
+}
+
+function renderCards(){
+  const act=Object.values(data).filter(p=>p.cult&&!p.cult.includes("Sin")&&p.cult!=="—");
+  const alertas=act.filter(p=>p.alerta.includes("REGAR")).length;
+  let html=`<div class="tots">
+    <div class="tot"><div class="tl">Activos</div><div class="tv">${act.length}</div><div class="tu">pivots</div></div>
+    <div class="tot"><div class="tl">Estado</div><div class="tv" style="font-size:13px">${alertas===0?'🟢 OK':'🔴 '+alertas}</div></div>
+    <div class="tot"><div class="tl">Alertas</div><div class="tv" style="color:${alertas>0?'var(--r)':'var(--g)'}">${alertas}</div><div class="tu">a regar</div></div>
+  </div><div class="cards-page">`;
+  for(const[campo,pids] of Object.entries(CAMPOS)){
+    html+=`<div class="clbl">${campo}</div><div class="grid">`;
+    pids.forEach(pid=>{
+      const p=data[pid]||{pid,cult:'',alerta:''};
+      const sin=!p.cult||p.cult.includes("Sin")||p.cult==="—";
+      const pN=num(p.pct);
+      html+=`<div class="card${sin?' off':''}" onclick="focusPivot('${pid}')">
+        <div class="ct"><span class="pid">${pid}</span>${bdg(p.alerta)}</div>
+        <div class="cult">${sin?'Sin cultivo':p.cult+(p.ddc?' · DDC '+p.ddc:'')}</div>
+        ${sin?'':`<div class="mx">
+          <div><div class="ml">AU disp.</div><div class="mv${pN>0&&pN<45?' rc':''}">${p.au||'—'} mm</div></div>
+          <div><div class="ml">% AU</div><div class="mv${pN>0&&pN<45?' rc':''}">${p.pct||'—'}</div></div>
+        </div><div class="divl"></div>
+        <div class="nx"><span>${p.prox||'—'}</span>${dc(p.dias)}</div>`}
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  html+=`</div>`;
+  document.getElementById("cards-content").innerHTML=html;
+}
+
+function focusPivot(pid){
+  goPage('map');
+  // Encontrar centro del pivot
+  let lat,lon;
+  if(PIVOT_SINGLE[pid]){lat=PIVOT_SINGLE[pid].lat;lon=PIVOT_SINGLE[pid].lon;}
+  else if(PIVOT_EP.sectors.find(s=>s.id===pid)){lat=PIVOT_EP.center.lat;lon=PIVOT_EP.center.lon;}
+  else{lat=PIVOT_SJ.center.lat;lon=PIVOT_SJ.center.lon;}
+  setTimeout(()=>{map.setView([lat,lon],14);},150);
+}
+
+// Cargar datos
+async function loadData(){
+  try{
+    const r=await fetch(CSV+"&nc="+Date.now());
+    const txt=await r.text();
+    const rows=parseCSV(txt);
+    data={};
+    for(const row of rows){
+      const pid=(row[1]||"").trim();
+      if(ALL_PIVOTS.includes(pid)){
+        data[pid]={pid,has:row[2],cult:(row[3]||"").trim(),camp:(row[4]||"").trim(),
+          ddc:(row[5]||"").trim(),est:(row[6]||"").trim(),au:(row[7]||"").trim(),
+          pct:(row[8]||"").trim(),alerta:(row[9]||"").trim(),prox:(row[10]||"").trim(),dias:(row[11]||"").trim()};
+      }
+    }
+    document.getElementById("upd").textContent=new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+  }catch(e){console.error(e);}
+}
+
+// Formulario carga
+function setToday(){
+  const d=new Date();
+  document.getElementById("f-fecha").value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+async function guardar(){
+  const pivot=document.getElementById("f-pivot").value;
+  const fecha=document.getElementById("f-fecha").value;
+  const lluvia=parseFloat(document.getElementById("f-lluvia").value)||0;
+  const riego=parseFloat(document.getElementById("f-riego").value)||0;
+  const msg=document.getElementById("carga-msg");
+  if(!pivot){msg.innerHTML='<div class="err-msg">Seleccioná un pivot</div>';return;}
+  if(!fecha){msg.innerHTML='<div class="err-msg">Ingresá una fecha</div>';return;}
+  if(lluvia===0&&riego===0){msg.innerHTML='<div class="err-msg">Ingresá lluvia o riego</div>';return;}
+  if(!APPS_SCRIPT_URL){
+    msg.innerHTML=`<div class="ok-msg">✅ Listo para guardar:<br><strong>${pivot}</strong> — ${fecha}<br>Lluvia: ${lluvia}mm · Riego: ${riego}mm<br><br><small>Activá el Apps Script Web App para guardar al Sheets</small></div>`;
+    return;
+  }
+  msg.innerHTML='<div style="color:var(--t3);text-align:center;padding:12px">Guardando...</div>';
+  try{
+    const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({pivot,fecha,lluvia,riego}),headers:{'Content-Type':'application/json'}});
+    const d=await r.json();
+    if(d.ok){msg.innerHTML='<div class="ok-msg">✅ Guardado en Sheets</div>';document.getElementById("f-lluvia").value="";document.getElementById("f-riego").value="";refresh();}
+    else msg.innerHTML=`<div class="err-msg">Error: ${d.error||'desconocido'}</div>`;
+  }catch(e){msg.innerHTML=`<div class="err-msg">Error: ${e.message}</div>`;}
+}
+
+function goPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='map') setTimeout(()=>map&&map.invalidateSize(),100);
+}
+
+async function refresh(){
+  await loadData();
+  renderCards();
+  updateMapLayers();
+}
+
+(async()=>{
+  setToday();
+  initMap();
+  await loadData();
+  renderCards();
+  updateMapLayers();
+})();
+</script>
+</body>
+</html>
